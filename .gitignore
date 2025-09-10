@@ -28,4 +28,4 @@ npm-debug.log*
 # Build output
 dist/
 build/
-coverage/
+coverage/ServiceAccountKey.json
