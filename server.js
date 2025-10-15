@@ -36,7 +36,8 @@ mongoose.connect(process.env.MONGO_URI).then(()=>{
   console.log('Connected to MongoDB');
   //Server start
   const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+  app.get("/api/test", (req, res) => res.json({ message: "Hello from server!" }));
+app.listen(PORT,"0.0.0.0",  () => {
   console.log(`Server running on port ${PORT}`);
 });
 }).catch((error) => {

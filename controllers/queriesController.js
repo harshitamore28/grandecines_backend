@@ -23,6 +23,7 @@ exports.postQuery = async (req, res) => {
 exports.getAllQueries = async (req, res) => {
       try {
         const queries = await Query.find().populate("user", "name phone").sort({ createdAt: -1 });
+        // console.log(queries);
         res.json(queries);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch queries" });

@@ -6,5 +6,5 @@ router.get('/check/:phone', userController.checkUser);
 router.post('/create', userController.createUser);
 router.get('/:phone', userController.getUserByPhone);
 router.get('/', userController.getAllUsers);
-router.post('/:id', userController.updateUser);
+router.put('/:id', userController.updateUser);
 module.exports = router;

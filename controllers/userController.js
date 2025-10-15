@@ -41,6 +41,7 @@ exports.getAllUsers = async (req, res) => {
 };
 // UPDATE
 exports.updateUser = async (req, res) => {
+  // console.log(req.body)
   try {
     const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
   res.json(user);
