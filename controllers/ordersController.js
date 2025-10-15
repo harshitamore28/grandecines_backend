@@ -47,9 +47,7 @@ exports.getAllOrders = async (req, res) => {
         let filter = {};
         if (status === 'COMPLETED') {
           filter.status = 'COMPLETED';
-          if(reviewed === 'false'){
-            filter.reviewed = true;
-          }
+            filter.reviewed = false;
         } else if (status === 'PENDING') {
           filter.status = 'PENDING';
         }

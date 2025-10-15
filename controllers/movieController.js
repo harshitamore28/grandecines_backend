@@ -34,6 +34,7 @@ exports.createMovie = async (req, res) => {
 
 // READ ALL
 exports.getAllMovies = async (req, res) => {
+  console.log("Fetching movies with filter:", req.query);
   try {
     const { releaseType } = req.query;
     let filter = {};
