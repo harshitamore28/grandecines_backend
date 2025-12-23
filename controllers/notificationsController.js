@@ -62,27 +62,62 @@ exports.sendNotifications = async (req, res) => {
 
     console.log('Preparing messages for multiple devices');
     const messaging = admin.messaging();
-    
-    // Send to multiple devices using Promise.all
-    const responses = await Promise.all(
-      tokens.map(token => 
+
+    // Send to multiple devices with individual error handling
+    const results = await Promise.allSettled(
+      tokens.map((token, index) =>
         messaging.send({
           ...messagePayload,
           token: token
-        })
+        }).then(response => ({ token, userId: users[index]._id, response, success: true }))
+          .catch(error => ({ token, userId: users[index]._id, error, success: false }))
       )
     );
-    
-    console.log('Firebase responses:', responses);
-    
-    const successCount = responses.length;
-    
+
+    // Process results and clean up invalid tokens
+    const successResults = [];
+    const failedResults = [];
+    const invalidTokenUserIds = [];
+
+    results.forEach((result) => {
+      if (result.status === 'fulfilled') {
+        const { success, token, userId, response, error } = result.value;
+        if (success) {
+          successResults.push(response);
+        } else {
+          failedResults.push({ token, error: error.message });
+          // Check if token is invalid/not registered
+          if (error.code === 'messaging/registration-token-not-registered' ||
+              error.code === 'messaging/invalid-registration-token') {
+            invalidTokenUserIds.push(userId);
+          }
+        }
+      }
+    });
+
+    // Remove invalid tokens from database
+    if (invalidTokenUserIds.length > 0) {
+      await User.updateMany(
+        { _id: { $in: invalidTokenUserIds } },
+        { $unset: { fcmToken: "" } }
+      );
+      console.log(`Removed ${invalidTokenUserIds.length} invalid FCM tokens`);
+    }
+
+    console.log('Firebase responses:', {
+      success: successResults.length,
+      failed: failedResults.length
+    });
+
     res.status(200).json({
       success: true,
-      message: 'Notifications sent successfully',
-      recipients: successCount,
+      message: 'Notifications processed',
+      recipients: successResults.length,
       totalDevices: tokens.length,
-      messageIds: responses
+      failed: failedResults.length,
+      invalidTokensRemoved: invalidTokenUserIds.length,
+      messageIds: successResults,
+      failures: failedResults.length > 0 ? failedResults : undefined
     });
   } catch (error) {
     console.error('Notification Error:', error);
