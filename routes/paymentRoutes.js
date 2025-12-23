@@ -30,9 +30,10 @@ router.post("/create-order", async (req, res) => {
 // ✅ Verify Payment Signature
 router.post("/verify-payment", (req, res) => {
   try {
+    console.log("Verify Payment Request Body:", req.body);
     const { razorpay_order_id, razorpay_signature, razorpay_payment_id } = req.body;
     console.log(req.body);
-    const hmac = crypto.createHmac("sha256", "YOUR_KEY_SECRET");
+    const hmac = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET);
     hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
     const generatedSignature = hmac.digest("hex");
     console.log("Generated Signature:", generatedSignature);
