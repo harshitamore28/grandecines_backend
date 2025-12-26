@@ -9,6 +9,16 @@ const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
+// ✅ Get Razorpay Key
+router.get("/razorpay-key", (req, res) => {
+  try {
+    res.json({ key: process.env.RAZORPAY_KEY_ID });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error fetching Razorpay key");
+  }
+});
+
 // ✅ Create an order
 router.post("/create-order", async (req, res) => {
   console.log("Create Order Request Body:", req.body);
