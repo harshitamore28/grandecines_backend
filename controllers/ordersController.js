@@ -43,7 +43,7 @@ exports.createOrder = async (req, res) => {
 };
 exports.getAllOrders = async (req, res) => {
       try {
-        console.log("Get All Orders Query Params:", req.query);
+        // console.log("Get All Orders Query Params:", req.query);
      const { status,reviewed } = await req.query;
         let filter = {};
         if (status === 'COMPLETED') {
