@@ -6,7 +6,7 @@ exports.sendNotifications = async (req, res) => {
   try {
     const { title, message, data, recipients} = req.body;
     // Build base query for users with valid FCM tokens
-    const baseQuery = { fcmToken: { $exists: true, $ne: null } };
+    const baseQuery = { fcmTokens: { $exists: true, $not: { $size: 0 } } };
 
     // Add filter if type = "admin"
     if (recipients === "ADMIN_SUPERADMIN") {
@@ -14,17 +14,40 @@ exports.sendNotifications = async (req, res) => {
     }
     // Get all valid FCM tokens
     const users = await User.find(baseQuery);
-    const tokens = users.map(user => user.fcmToken);
 
-    if (tokens.length === 0) {
+    // Flatten tokens from all users, keeping track of user info for each token
+    // Filter out any empty/invalid tokens
+    const tokenUserMap = [];
+    users.forEach(user => {
+      user.fcmTokens.forEach(tokenObj => {
+        // Only include tokens that are valid (non-empty strings)
+        if (tokenObj.token && typeof tokenObj.token === 'string' && tokenObj.token.trim() !== '') {
+          tokenUserMap.push({
+            token: tokenObj.token,
+            userId: user._id,
+            userName: user.name || 'Unknown',
+            phone: user.phone,
+            deviceName: tokenObj.deviceName || 'Unknown Device',
+            platform: tokenObj.platform || 'Unknown'
+          });
+        }
+      });
+    });
+
+    if (tokenUserMap.length === 0) {
       return res.status(200).json({
         success: true,
         message: 'No users to send notifications to',
         recipients: 0
       });
     }
-    
-    console.log("Tokens to send to:", tokens);
+
+    console.log("\n========== SENDING NOTIFICATIONS ==========");
+    console.log(`Total devices: ${tokenUserMap.length}`);
+    console.log("Recipients:");
+    tokenUserMap.forEach((item, index) => {
+      console.log(`  ${index + 1}. ${item.userName} (${item.phone}) - ${item.deviceName} [${item.platform}]`);
+    });
     
     // Updated message payload for all states
     const messagePayload = {
@@ -65,58 +88,68 @@ exports.sendNotifications = async (req, res) => {
 
     // Send to multiple devices with individual error handling
     const results = await Promise.allSettled(
-      tokens.map((token, index) =>
+      tokenUserMap.map((userInfo) =>
         messaging.send({
           ...messagePayload,
-          token: token
-        }).then(response => ({ token, userId: users[index]._id, response, success: true }))
-          .catch(error => ({ token, userId: users[index]._id, error, success: false }))
+          token: userInfo.token
+        }).then(response => ({ ...userInfo, response, success: true }))
+          .catch(error => ({ ...userInfo, error, success: false }))
       )
     );
 
     // Process results and clean up invalid tokens
     const successResults = [];
     const failedResults = [];
-    const invalidTokenUserIds = [];
+    const invalidTokens = [];
+
+    console.log("\n---------- RESULTS ----------");
 
     results.forEach((result) => {
       if (result.status === 'fulfilled') {
-        const { success, token, userId, response, error } = result.value;
+        const { success, token, userName, phone, deviceName, platform, response, error } = result.value;
         if (success) {
-          successResults.push(response);
+          successResults.push({ userName, phone, deviceName, platform, messageId: response });
+          console.log(`✅ SUCCESS: ${userName} (${phone}) - ${deviceName} [${platform}]`);
         } else {
-          failedResults.push({ token, error: error.message });
+          failedResults.push({ userName, phone, deviceName, platform, error: error.message });
+          console.log(`❌ FAILED: ${userName} (${phone}) - ${deviceName} [${platform}] - Error: ${error.message}`);
           // Check if token is invalid/not registered
           if (error.code === 'messaging/registration-token-not-registered' ||
               error.code === 'messaging/invalid-registration-token') {
-            invalidTokenUserIds.push(userId);
+            invalidTokens.push(token);
           }
         }
       }
     });
 
     // Remove invalid tokens from database
-    if (invalidTokenUserIds.length > 0) {
+    if (invalidTokens.length > 0) {
       await User.updateMany(
-        { _id: { $in: invalidTokenUserIds } },
-        { $unset: { fcmToken: "" } }
+        { 'fcmTokens.token': { $in: invalidTokens } },
+        { $pull: { fcmTokens: { token: { $in: invalidTokens } } } }
       );
-      console.log(`Removed ${invalidTokenUserIds.length} invalid FCM tokens`);
+      console.log(`\n🗑️  Removed ${invalidTokens.length} invalid FCM tokens from database`);
     }
 
-    console.log('Firebase responses:', {
-      success: successResults.length,
-      failed: failedResults.length
-    });
+    // Also clean up any empty/null tokens that might exist in the database
+    await User.updateMany(
+      {},
+      { $pull: { fcmTokens: { token: { $in: [null, '', undefined] } } } }
+    );
+
+    console.log("\n---------- SUMMARY ----------");
+    console.log(`✅ Successful: ${successResults.length}`);
+    console.log(`❌ Failed: ${failedResults.length}`);
+    console.log("========================================\n");
 
     res.status(200).json({
       success: true,
       message: 'Notifications processed',
       recipients: successResults.length,
-      totalDevices: tokens.length,
+      totalDevices: tokenUserMap.length,
       failed: failedResults.length,
-      invalidTokensRemoved: invalidTokenUserIds.length,
-      messageIds: successResults,
+      invalidTokensRemoved: invalidTokens.length,
+      successDetails: successResults,
       failures: failedResults.length > 0 ? failedResults : undefined
     });
   } catch (error) {

@@ -19,7 +19,7 @@ const app = admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
-console.log('✅ Firebase Admin initialized');
+// console.log('✅ Firebase Admin initialized');
 
 module.exports = admin;
 // const admin = require('firebase-admin');

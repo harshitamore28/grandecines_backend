@@ -10,6 +10,7 @@ const parseTimings = (timings) => {
 
 // CREATE
 exports.createMovie = async (req, res) => {
+  console.log("Creating movie with data:", req.body, "and file:", req.file);  
   try {
     const { name, rating, timings, releaseType, release } = req.body;
     const poster = req.file?.path;

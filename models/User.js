@@ -19,8 +19,11 @@ const userSchema = new mongoose.Schema({
       ref: "Query",
     },
   ],
-  fcmToken: { type: String },
-  platform: { type: String },
+  fcmTokens: [{
+    token: { type: String, required: true },
+    deviceName: { type: String },
+    platform: { type: String }
+  }],
   createdAt: {
     type: Date,
     default: Date.now,
