@@ -46,10 +46,10 @@ app.listen(PORT,"0.0.0.0",  () => {
   console.error('MongoDB connection error:', error);
   process.exit(1); // Exit the process with failure
 });
-(async () => {
-  await Food.deleteMany(); // clear old data
-  await Food.insertMany(food_list);
-  console.log("Data seeded!");
-  // process.exit();
-})();
+// (async () => {
+//   await Food.deleteMany(); // clear old data
+//   await Food.insertMany(food_list);
+//   console.log("Data seeded!");
+//   // process.exit();
+// })();
 
