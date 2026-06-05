@@ -1,4 +1,4 @@
-let imgBaseUrl = "https://res.cloudinary.com/harshita28/image/upload/v1756745478/food/";
+let imgBaseUrl = "https://res.cloudinary.com/harshita28/image/upload/f_auto,q_auto:eco,w_300/v1756745478/food/";
 const food_list = [
     {name:"Regular Popcorn", image: `${imgBaseUrl}popcorn_small_sfptgr.jpg`,price: 350, description:"Serves One (Any flavour)",category:"Popcorn"},
     {name:"Medium Popcorn", image: `${imgBaseUrl}popcorn_medium_jfjfyn.jpg`,price: 430, description:"Serves Two (Any flavour)",category:"Popcorn"},
